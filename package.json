@@ -1,0 +1,25 @@
+{
+  "name": "easy-production",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "dexie": "^3.2.4",
+    "fake-indexeddb": "^6.2.5",
+    "uuid": "^9.0.0",
+    "zod": "^3.23.2",
+    "zustand": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.4.2",
+    "@types/uuid": "^9.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^0.34.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "npm run build",
+    "test": "vitest",
+    "test:watch": "vitest --watch",
+    "seed:node": "node -r fake-indexeddb/auto -e \"(async()=>{const {seedDemoData}=require('./dist'); const r=await seedDemoData({trackingMode:'hybrid'}); console.log(JSON.stringify(r,null,2));})().catch(e=>{console.error(e);process.exit(1)})\""
+  }
+}
