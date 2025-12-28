@@ -13,8 +13,9 @@
     "baseUrl": "./src",
     "outDir": "dist",
     "declaration": true,
-    "isolatedModules": false
+    "isolatedModules": false,
+    "jsx": "react-jsx"
   },
-  "include": ["src", "docs", "src/__tests__", "vitest.config.ts"],
+  "include": ["src", "docs", "src/__tests__", "vitest.config.ts", "next-env.d.ts"],
   "exclude": ["node_modules", "dist"]
 }

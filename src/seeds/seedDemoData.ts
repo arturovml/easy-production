@@ -61,8 +61,9 @@ export async function seedDemoData({ trackingMode = 'piece' }: { trackingMode?: 
   const routingOps = ops.slice(0, 4).map((o, idx) => RoutingOperationSchema.parse({ id: uuidv4(), routingVersionId: rv1.id, operationId: o.id, sequence: idx + 1 }));
   await db.routingOperations.bulkAdd(routingOps);
 
-  // Production order
-  const po = ProductionOrderSchema.parse({ id: uuidv4(), productId: p1.id, quantityRequested: 100, workshopId: uuidv4(), routingVersionSnapshot: { id: rv1.id, operations: routingOps } });
+  // Production order (use a new UUID workshop id)
+  const workshopId = uuidv4();
+  const po = ProductionOrderSchema.parse({ id: uuidv4(), productId: p1.id, quantityRequested: 100, workshopId, routingVersionSnapshot: { id: rv1.id, operations: routingOps } });
   await db.productionOrders.add(po);
 
   // Optional lots if trackingMode in (lot, hybrid)

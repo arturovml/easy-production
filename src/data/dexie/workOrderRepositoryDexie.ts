@@ -5,6 +5,7 @@ export interface ProductionOrderRepository {
   add(order: ProductionOrder): Promise<void>;
   getById(id: string): Promise<ProductionOrder | undefined>;
   listByWorkshop(workshopId: string): Promise<ProductionOrder[]>;
+  listAll(): Promise<ProductionOrder[]>;
 }
 
 export class ProductionOrderRepositoryDexie implements ProductionOrderRepository {
@@ -21,5 +22,8 @@ export class ProductionOrderRepositoryDexie implements ProductionOrderRepository
   }
   async listByWorkshop(workshopId: string): Promise<ProductionOrder[]> {
     return this.db.productionOrders.where('workshopId').equals(workshopId).toArray();
+  }
+  async listAll(): Promise<ProductionOrder[]> {
+    return this.db.productionOrders.toArray();
   }
 }
