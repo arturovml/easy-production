@@ -22,7 +22,22 @@ export default function OrderDetailPageClient() {
   if (isLoading) return <div>Loading...</div>;
   if (isError || !data) return <div>Order not found</div>;
 
-  const { order, stages, processedPieces, completedPieces, wipPieces, completionPercent, avgStageProgress, lots } = data as OrderDetailVM;
+  const { order, stages, processedPieces, completedPieces, wipPieces, completionPercent, avgStageProgress, lots, error } = data as OrderDetailVM;
+
+  // Handle invalid snapshot error
+  if (error) {
+    return (
+      <div>
+        <PageHeader title={`Order ${order.id.slice(0, 8)}`} subtitle="Error loading order details" />
+        <div className="p-4 bg-red-50 border border-red-200 rounded">
+          <p className="text-red-800 font-medium">Invalid routing snapshot</p>
+          <p className="text-red-700 text-sm mt-1">
+            The routing snapshot for this order is invalid or corrupted. Please contact support.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const scrap = stages.reduce((s, st) => s + st.scrapPieces, 0);
   const stdMinutes = stages.reduce((s, st) => s + st.standardMinutesProduced, 0);
   const trackingMode = order.trackingMode ?? 'piece';

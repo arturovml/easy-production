@@ -21,6 +21,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <Link className="block p-2 rounded hover:bg-slate-100" href="/orders">Orders</Link>
                   <Link className="block p-2 rounded hover:bg-slate-100" href="/catalog/products">Catalog</Link>
                   <Link className="block p-2 rounded hover:bg-slate-100" href="/record">Record</Link>
+                  {process.env.NODE_ENV === 'development' && (
+                    <Link className="block p-2 rounded hover:bg-slate-100" href="/sync">Sync (Dev)</Link>
+                  )}
                 </nav>
               </aside>
               <main className="flex-1 p-6">

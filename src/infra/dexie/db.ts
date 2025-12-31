@@ -23,6 +23,7 @@ export class AppDB extends Dexie {
   lots!: Table<Lot, string>;
   workEvents!: Table<WorkEvent, string>;
   outboxEvents!: Table<OutboxEvent, string>;
+  remoteEvents!: Table<{ id: string; receivedAt: string; payload: unknown }, string>;
 
   constructor(dbName = 'EasyProductionDB') {
     super(dbName);
@@ -51,6 +52,28 @@ export class AppDB extends Dexie {
         // Migration: existing lots without orderId are left as legacy (no auto-inference)
         // Existing orders without trackingMode default to 'piece' (handled by schema default)
         // No data transformation needed - schema defaults handle it
+      });
+
+    // Version 3: Add fields to outboxEvents for sync tracking
+    this.version(3)
+      .stores({
+        outboxEvents: 'id, status, workshopId, timestamp, attemptCount', // Add attemptCount index
+        remoteEvents: 'id, receivedAt', // New table for mock transport idempotency
+      })
+      .upgrade(async (tx) => {
+        // Migration: existing outboxEvents get default attemptCount=0
+        // No data transformation needed - schema defaults handle it
+      });
+
+    // Version 4: Add performance indexes
+    this.version(4)
+      .stores({
+        workEvents: 'id, aggregateId, workshopId, timestamp, [aggregateId+timestamp]', // Compound index for batch queries
+        outboxEvents: 'id, status, workshopId, timestamp, attemptCount, [status+timestamp]', // Compound index for status queries
+        productionOrders: 'id, productId, workshopId, trackingMode, timestamp', // Add timestamp index
+      })
+      .upgrade(async (tx) => {
+        // No data transformation needed - only index changes
       });
 
     // Migrate hooks and future versions can be added later.

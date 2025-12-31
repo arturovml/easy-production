@@ -11,6 +11,7 @@ import { fetchProductById } from './productService';
 import { fetchRoutingVersionById, fetchRoutingOperationsByVersion } from './routingService';
 import { fetchOperationById } from './operationService';
 import { getLotsForOrder } from './lotService';
+import { RoutingSnapshotSchema } from '../../shared/routingSnapshotSchemas';
 
 const orderRepo = new ProductionOrderRepositoryDexie();
 const eventRepo = new EventRepositoryDexie();
@@ -188,27 +189,38 @@ export async function fetchOrdersList(): Promise<OrdersListVM[]> {
   const products = await Promise.all(productIds.map((id) => productRepo.getById(id)));
   const productMap = new Map(products.filter((p): p is NonNullable<typeof p> => p !== undefined).map((p) => [p.id, p]));
 
-  const vms = await Promise.all(
-    orders.map(async (o) => {
-      const events = await eventRepo.listByAggregate(o.id);
-      const progress = computeOrderProgressFromEvents({ id: o.id, quantityRequested: o.quantityRequested }, (o.routingVersionSnapshot as any) ?? { id: '', operations: [] }, events);
-      const product = productMap.get(o.productId);
-      return {
-        orderId: o.id,
-        productId: o.productId,
-        productName: product?.name ?? `Product (${o.productId.slice(0, 8)}...)`,
-        productSku: product?.sku,
-        targetPieces: progress.targetPieces,
-        completedPieces: progress.completedPieces,
-        wipPieces: progress.wipPieces,
-        processedPieces: progress.processedPieces,
-        scrapPieces: progress.scrapPieces,
-        completionPercent: progress.completionPercent,
-        trackingMode: o.trackingMode ?? 'piece', // Default to 'piece' for legacy orders
-        updatedAt: undefined
-      } as OrdersListVM;
-    })
-  );
+  // Batch load all events for all orders in one query (avoid N+1)
+  const orderIds = orders.map((o) => o.id);
+  const allEvents = await eventRepo.listByAggregateIds(orderIds);
+  
+  // Group events by aggregateId (orderId)
+  const eventsByOrderId = new Map<string, typeof allEvents>();
+  for (const event of allEvents) {
+    const existing = eventsByOrderId.get(event.aggregateId) ?? [];
+    existing.push(event);
+    eventsByOrderId.set(event.aggregateId, existing);
+  }
+
+  // Compute progress for each order using pre-loaded events
+  const vms = orders.map((o) => {
+    const events = eventsByOrderId.get(o.id) ?? [];
+    const progress = computeOrderProgressFromEvents({ id: o.id, quantityRequested: o.quantityRequested }, (o.routingVersionSnapshot as any) ?? { id: '', operations: [] }, events);
+    const product = productMap.get(o.productId);
+    return {
+      orderId: o.id,
+      productId: o.productId,
+      productName: product?.name ?? `Product (${o.productId.slice(0, 8)}...)`,
+      productSku: product?.sku,
+      targetPieces: progress.targetPieces,
+      completedPieces: progress.completedPieces,
+      wipPieces: progress.wipPieces,
+      processedPieces: progress.processedPieces,
+      scrapPieces: progress.scrapPieces,
+      completionPercent: progress.completionPercent,
+      trackingMode: o.trackingMode ?? 'piece', // Default to 'piece' for legacy orders
+      updatedAt: undefined
+    } as OrdersListVM;
+  });
   return vms;
 }
 
@@ -237,13 +249,34 @@ export type OrderDetailVM = {
     overProduced: boolean;
     wipPieces?: number;
   }>;
+  error?: string; // For invalid snapshot errors
 };
 
 export async function fetchOrderDetail(orderId: string): Promise<OrderDetailVM | null> {
   const order = await orderRepo.getById(orderId);
   if (!order) return null;
   const events = await eventRepo.listByAggregate(orderId);
-  const routingSnapshot = (order.routingVersionSnapshot as any) ?? { id: '', operations: [] };
+  
+  // Safe-validate routing snapshot
+  const snapshotParseResult = RoutingSnapshotSchema.safeParse(order.routingVersionSnapshot);
+  if (!snapshotParseResult.success) {
+    // Invalid snapshot - return error state (UI will handle gracefully)
+    return {
+      order,
+      stages: [],
+      processedPieces: 0,
+      completedPieces: 0,
+      wipPieces: 0,
+      completionPercent: 0,
+      error: 'Invalid routing snapshot',
+    } as OrderDetailVM & { error?: string };
+  }
+  const validatedSnapshot = snapshotParseResult.data;
+  // Ensure productId is set (required by aggregation functions)
+  const routingSnapshot = {
+    ...validatedSnapshot,
+    productId: validatedSnapshot.productId ?? order.productId,
+  };
   
   // Compute order progress to get correct completionPercent
   const progress = computeOrderProgressFromEvents(

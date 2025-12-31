@@ -79,7 +79,7 @@ describe('repositories integration (dexie in Node via fake-indexeddb)', () => {
     const pending = await outboxRepo.listPending();
     expect(pending.length).toBe(1);
 
-    await outboxRepo.markSent(pending[0].id);
+    await outboxRepo.markSent([pending[0].id], new Date().toISOString());
     const pendingAfter = await outboxRepo.listPending();
     expect(pendingAfter.length).toBe(0);
   });

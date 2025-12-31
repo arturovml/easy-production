@@ -1,8 +1,7 @@
 {
-  "/record/page": "app/record/page.js",
-  "/orders/new/page": "app/orders/new/page.js",
-  "/products/[productId]/routing/page": "app/products/[productId]/routing/page.js",
   "/orders/[id]/page": "app/orders/[id]/page.js",
+  "/sync/page": "app/sync/page.js",
+  "/record/page": "app/record/page.js",
   "/orders/page": "app/orders/page.js",
-  "/catalog/products/page": "app/catalog/products/page.js"
+  "/orders/new/page": "app/orders/new/page.js"
 }

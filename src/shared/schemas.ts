@@ -86,6 +86,10 @@ export const WorkEventSchema = z.object({
 export type WorkEvent = z.infer<typeof WorkEventSchema>;
 
 export const OutboxEventSchema = WorkEventSchema.extend({
-  status: z.union([z.literal('pending'), z.literal('sending'), z.literal('sent'), z.literal('failed')])
+  status: z.union([z.literal('pending'), z.literal('sending'), z.literal('sent'), z.literal('failed')]),
+  attemptCount: z.number().int().nonnegative().default(0),
+  lastAttemptAt: z.string().datetime().optional(),
+  sentAt: z.string().datetime().optional(),
+  errorMessage: z.string().optional(),
 });
 export type OutboxEvent = z.infer<typeof OutboxEventSchema>;
