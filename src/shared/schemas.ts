@@ -5,7 +5,8 @@ export const ProductSchema = z.object({
   id: z.string().uuid(),
   sku: z.string(),
   name: z.string(),
-  metadata: z.record(z.unknown()).optional()
+  metadata: z.record(z.unknown()).optional(),
+  activeRoutingVersionId: z.string().uuid().optional()
 });
 export type Product = z.infer<typeof ProductSchema>;
 
@@ -13,14 +14,16 @@ export const OperationSchema = z.object({
   id: z.string().uuid(),
   code: z.string(),
   name: z.string(),
-  durationMinutes: z.number().int().nonnegative()
+  durationMinutes: z.number().int().nonnegative(),
+  qualityGate: z.boolean().default(false)
 });
 export type Operation = z.infer<typeof OperationSchema>;
 
 export const WorkCenterSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
-  location: z.string().optional()
+  location: z.string().optional(),
+  type: z.string().optional()
 });
 export type WorkCenter = z.infer<typeof WorkCenterSchema>;
 
@@ -35,7 +38,9 @@ export const RoutingOperationSchema = z.object({
   id: z.string().uuid(),
   routingVersionId: z.string().uuid(),
   operationId: z.string().uuid(),
-  sequence: z.number().int().nonnegative()
+  sequence: z.number().int().nonnegative(),
+  standardMinutesOverride: z.number().int().positive().optional(),
+  workCenterIdOverride: z.string().uuid().optional()
 });
 export type RoutingOperation = z.infer<typeof RoutingOperationSchema>;
 
@@ -43,7 +48,8 @@ export const RoutingVersionSchema = z.object({
   id: z.string().uuid(),
   productId: z.string().uuid(),
   version: z.number().int().nonnegative(),
-  createdAt: z.string().datetime()
+  createdAt: z.string().datetime(),
+  isDraft: z.boolean().default(true)
 });
 export type RoutingVersion = z.infer<typeof RoutingVersionSchema>;
 

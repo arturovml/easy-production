@@ -4,10 +4,9 @@ import React from 'react';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { PageHeader } from '../../../ui/components/PageHeader';
-import { fetchOrderDetail } from '../../../services/ui/orderService';
+import { fetchOrderDetail, type OrderDetailVM } from '../../../services/ui/orderService';
 import { StatCard } from '../../../ui/components/StatCard';
 import { DataTable } from '../../../ui/components/DataTable';
-import type { StageProgressVM } from '../../../domain/viewModels';
 
 export default function OrderDetailPageClient() {
   const params = useParams();
@@ -22,21 +21,22 @@ export default function OrderDetailPageClient() {
   if (isLoading) return <div>Loading...</div>;
   if (isError || !data) return <div>Order not found</div>;
 
-  const { order, stages } = data as { order: any; stages: StageProgressVM[] };
-  const done = stages.reduce((s, st) => s + st.donePieces, 0);
+  const { order, stages, processedPieces, completedPieces, wipPieces, completionPercent, avgStageProgress } = data as OrderDetailVM;
   const scrap = stages.reduce((s, st) => s + st.scrapPieces, 0);
-  const target = order.quantityRequested;
-  const completion = target > 0 ? Math.min(100, (done / target) * 100) : 0;
   const stdMinutes = stages.reduce((s, st) => s + st.standardMinutesProduced, 0);
 
   return (
     <div>
-      <PageHeader title={`Order ${order.id.slice(0,8)}`} subtitle={`Product ${order.productId.slice(0,8)}`} />
+      <PageHeader 
+        title={`Order ${order.id.slice(0, 8)}`} 
+        subtitle={`Product ID: ${order.productId.slice(0, 8)}...`} 
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <StatCard title="Done" value={done} />
+      <div className={`grid grid-cols-1 gap-4 mb-6 ${wipPieces > 0 ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
+        <StatCard title="Completed" value={completedPieces} subtitle={`Processed: ${processedPieces}`} />
+        {wipPieces > 0 && <StatCard title="WIP" value={wipPieces} />}
         <StatCard title="Scrap" value={scrap} />
-        <StatCard title="% Complete" value={`${Math.round(completion)}%`} />
+        <StatCard title="% Complete" value={`${Math.round(completionPercent)}%`} subtitle={avgStageProgress !== undefined ? `Avg stage: ${Math.round(avgStageProgress)}%` : undefined} />
         <StatCard title="Standard Minutes" value={Math.round(stdMinutes)} />
       </div>
 
@@ -57,10 +57,13 @@ export default function OrderDetailPageClient() {
           </tr>
         </thead>
         <tbody>
-          {stages.map((s: StageProgressVM) => (
+          {stages.map((s) => (
             <tr key={s.operationId} className="hover:bg-slate-50">
               <td className="p-2">{s.sequence}</td>
-              <td className="p-2">{s.operationId.slice(0,8)}</td>
+              <td className="p-2">
+                <div className="font-medium">{s.operationName || `Operation (${s.operationId.slice(0, 8)}...)`}</div>
+                <div className="text-xs text-muted-foreground">ID: {s.operationId.slice(0, 8)}...</div>
+              </td>
               <td className="p-2 text-right">{s.standardMinutesProduced > 0 ? Math.round(s.standardMinutesProduced / Math.max(1, s.donePieces - s.scrapPieces)) : 0}</td>
               <td className="p-2 text-right">{s.donePieces}</td>
               <td className="p-2 text-right">{s.scrapPieces}</td>

@@ -17,7 +17,9 @@
     "dexie": "^3.2.4",
     "uuid": "^9.0.0",
     "zod": "^3.23.2",
-    "zustand": "^4.4.0"
+    "zustand": "^4.4.0",
+    "react-hook-form": "^7.48.2",
+    "@hookform/resolvers": "^3.3.2"
   },
   "devDependencies": {
     "@types/node": "^20.4.2",

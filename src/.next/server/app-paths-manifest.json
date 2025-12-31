@@ -1,5 +1,11 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
   "/orders/page": "app/orders/page.js",
-  "/orders/[id]/page": "app/orders/[id]/page.js"
+  "/products/[productId]/routing/page": "app/products/[productId]/routing/page.js",
+  "/orders/new/page": "app/orders/new/page.js",
+  "/record/page": "app/record/page.js",
+  "/orders/[id]/page": "app/orders/[id]/page.js",
+  "/catalog/products/page": "app/catalog/products/page.js",
+  "/catalog/operations/page": "app/catalog/operations/page.js",
+  "/catalog/work-centers/page": "app/catalog/work-centers/page.js",
+  "/catalog/operators/page": "app/catalog/operators/page.js"
 }

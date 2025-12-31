@@ -11,6 +11,9 @@ export class OperatorRepositoryDexie implements OperatorRepository {
   async add(op: Operator): Promise<void> {
     await this.db.operators.add(op);
   }
+  async update(id: string, updates: Partial<Operator>): Promise<void> {
+    await this.db.operators.update(id, updates);
+  }
   async getById(id: string): Promise<Operator | undefined> {
     return this.db.operators.get(id);
   }

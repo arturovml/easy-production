@@ -19,8 +19,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <div className="p-4 font-bold text-xl">Easy Production</div>
                 <nav className="p-4 space-y-2">
                   <Link className="block p-2 rounded hover:bg-slate-100" href="/orders">Orders</Link>
-                  <Link className="block p-2 rounded hover:bg-slate-100" href="/catalog">Catalog (Coming soon)</Link>
-                  <Link className="block p-2 rounded hover:bg-slate-100" href="/record">Record (Coming soon)</Link>
+                  <Link className="block p-2 rounded hover:bg-slate-100" href="/catalog/products">Catalog</Link>
+                  <Link className="block p-2 rounded hover:bg-slate-100" href="/record">Record</Link>
                 </nav>
               </aside>
               <main className="flex-1 p-6">

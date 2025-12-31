@@ -17,6 +17,10 @@ export class ProductRepositoryDexie implements ProductRepository {
     }
   }
 
+  async update(id: string, updates: Partial<Product>): Promise<void> {
+    await this.db.products.update(id, updates);
+  }
+
   async getById(id: string): Promise<Product | undefined> {
     return this.db.products.get(id);
   }

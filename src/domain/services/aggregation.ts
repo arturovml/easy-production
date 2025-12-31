@@ -45,17 +45,53 @@ export function computeOrderProgressFromEvents(
   routingSnapshot: RoutingSnapshot,
   events: WorkEvent[]
 ): OrderProgressVM {
-  const donePieces = events.reduce((s, e) => s + ((e.payload as any)?.qtyDone ?? 0), 0);
+  // Compute stage totals first to get donePieces per operation
+  const stages = computeStageTotalsFromEvents(routingSnapshot, events);
+  
+  // Find the last operation (max sequence)
+  const lastOperation = routingSnapshot.operations.length > 0
+    ? routingSnapshot.operations.reduce((max, op) => op.sequence > max.sequence ? op : max)
+    : null;
+  
+  // Get donePieces from the last operation
+  const lastOperationStage = lastOperation
+    ? stages.find((s) => s.operationId === lastOperation.operationId)
+    : null;
+  const completedPieces = lastOperationStage?.donePieces ?? 0;
+  
+  // Processed pieces = sum of donePieces across all operations
+  const processedPieces = stages.reduce((s, st) => s + st.donePieces, 0);
+  
+  // WIP pieces = max(stageDone) - completedPieces, clamped >= 0
+  const maxStageDone = stages.length > 0 ? Math.max(...stages.map((st) => st.donePieces)) : 0;
+  const wipPieces = Math.max(0, maxStageDone - completedPieces);
+  
+  // Scrap is still total across all operations
   const scrapPieces = computeScrapTotalsFromEvents(events);
   const targetPieces = order.quantityRequested;
-  const completionPercent = targetPieces > 0 ? Math.min(100, (donePieces / targetPieces) * 100) : 0;
+  
+  // Completion percent based on last operation
+  const completionPercent = targetPieces > 0 ? Math.min(100, (completedPieces / targetPieces) * 100) : 0;
+  
+  // Optional: Average stage progress
+  const avgStageProgress = stages.length > 0 && targetPieces > 0
+    ? stages.reduce((sum, st) => {
+        const stageProgress = Math.min(100, (st.donePieces / targetPieces) * 100);
+        return sum + stageProgress;
+      }, 0) / stages.length
+    : undefined;
+  
   const standardMinutesProducedTotal = computeStandardMinutesProduced(routingSnapshot, events);
+  
   return {
     orderId: order.id,
     targetPieces,
-    donePieces,
+    processedPieces,
+    completedPieces,
+    wipPieces,
     scrapPieces,
     completionPercent,
+    avgStageProgress,
     standardMinutesProducedTotal
   } as OrderProgressVM;
 }

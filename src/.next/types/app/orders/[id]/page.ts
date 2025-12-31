@@ -1,4 +1,4 @@
-// File: /workspaces/easy-production/src/app/orders/[id]/page.tsx
+// File: /Users/arturovargas/Documents/Github/easy-production/src/app/orders/[id]/page.tsx
 import * as entry from '../../../../../app/orders/[id]/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

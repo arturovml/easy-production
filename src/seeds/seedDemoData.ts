@@ -35,12 +35,12 @@ export async function seedDemoData({ trackingMode = 'piece' }: { trackingMode?: 
 
   // Operations
   const ops = [
-    { code: 'OP-1', name: 'Cut', durationMinutes: 5 },
-    { code: 'OP-2', name: 'Drill', durationMinutes: 10 },
-    { code: 'OP-3', name: 'Deburr', durationMinutes: 3 },
-    { code: 'OP-4', name: 'Assemble', durationMinutes: 15 },
-    { code: 'OP-5', name: 'Paint', durationMinutes: 20 },
-    { code: 'OP-6', name: 'Inspect', durationMinutes: 7 }
+    { code: 'OP-1', name: 'Cut', durationMinutes: 5, qualityGate: false },
+    { code: 'OP-2', name: 'Drill', durationMinutes: 10, qualityGate: false },
+    { code: 'OP-3', name: 'Deburr', durationMinutes: 3, qualityGate: false },
+    { code: 'OP-4', name: 'Assemble', durationMinutes: 15, qualityGate: false },
+    { code: 'OP-5', name: 'Paint', durationMinutes: 20, qualityGate: false },
+    { code: 'OP-6', name: 'Inspect', durationMinutes: 7, qualityGate: true }
   ].map((o) => OperationSchema.parse({ id: uuidv4(), ...o }));
   await db.operations.bulkAdd(ops);
 
@@ -54,12 +54,15 @@ export async function seedDemoData({ trackingMode = 'piece' }: { trackingMode?: 
   await db.operators.bulkAdd([op1, op2]);
 
   // RoutingVersion per product
-  const rv1 = RoutingVersionSchema.parse({ id: uuidv4(), productId: p1.id, version: 1, createdAt: new Date().toISOString() });
+  const rv1 = RoutingVersionSchema.parse({ id: uuidv4(), productId: p1.id, version: 1, createdAt: new Date().toISOString(), isDraft: false });
   await db.routingVersions.add(rv1);
 
   // routingOperations ordered
   const routingOps = ops.slice(0, 4).map((o, idx) => RoutingOperationSchema.parse({ id: uuidv4(), routingVersionId: rv1.id, operationId: o.id, sequence: idx + 1 }));
   await db.routingOperations.bulkAdd(routingOps);
+
+  // Set active routing version on product
+  await db.products.update(p1.id, { activeRoutingVersionId: rv1.id });
 
   // Production order (use a new UUID workshop id)
   const workshopId = uuidv4();
