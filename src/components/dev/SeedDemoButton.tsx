@@ -24,6 +24,8 @@ export default function SeedDemoButton({ className }: { className?: string }) {
     setMessage(null);
     try {
       // dynamic import to ensure this runs only on client and not bundled for server
+      // Note: Next.js resolves TypeScript imports without extension at runtime
+      // @ts-expect-error - NodeNext requires .js but Next.js resolves without extension
       const { seedDemoData } = await import('../../seeds/seedDemoData');
       const result = await seedDemoData({ trackingMode: 'hybrid' });
       setMessage('Seed completed');

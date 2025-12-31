@@ -16,8 +16,8 @@ import {
   recordProduction,
   fetchOperators,
   fetchWorkCenters,
-  fetchLotsByProduct,
 } from '../../services/ui/recordService';
+import { getLotsForOrder } from '../../services/ui/lotService';
 import { fetchOperations } from '../../services/ui/operationService';
 
 type RoutingOperationSnapshot = {
@@ -39,7 +39,6 @@ export default function RecordPage() {
   const queryClient = useQueryClient();
   const [showScrap, setShowScrap] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [trackingMode, setTrackingMode] = useState<'piece' | 'lot' | 'hybrid'>('piece');
 
   const {
     register,
@@ -84,22 +83,15 @@ export default function RecordPage() {
     queryFn: fetchWorkCenters,
   });
 
-  // Fetch lots when order is selected and trackingMode != piece
-  const orderProductId = orderDetail?.order?.productId;
-  const { data: lots, isLoading: lotsLoading } = useQuery({
-    queryKey: ['lots', orderProductId],
-    queryFn: () => (orderProductId ? fetchLotsByProduct(orderProductId) : []),
-    enabled: !!orderProductId && trackingMode !== 'piece',
-  });
+  // Get trackingMode from order
+  const trackingMode = orderDetail?.order?.trackingMode ?? 'piece';
 
-  // Determine tracking mode based on lots availability
-  useEffect(() => {
-    if (lots && lots.length > 0) {
-      setTrackingMode('hybrid'); // If lots exist, assume hybrid (could be lot or hybrid)
-    } else if (orderProductId) {
-      setTrackingMode('piece');
-    }
-  }, [lots, orderProductId]);
+  // Fetch lots when order is selected and trackingMode != piece
+  const { data: lots, isLoading: lotsLoading } = useQuery({
+    queryKey: ['lots', watchedOrderId],
+    queryFn: () => (watchedOrderId ? getLotsForOrder(watchedOrderId) : []),
+    enabled: !!watchedOrderId && trackingMode !== 'piece',
+  });
 
   // Fetch operations for display names
   const { data: allOperations } = useQuery({
@@ -133,6 +125,7 @@ export default function RecordPage() {
       queryClient.invalidateQueries({ queryKey: ['ordersList'] });
       queryClient.invalidateQueries({ queryKey: ['orderDetail', variables.orderId] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
+      queryClient.invalidateQueries({ queryKey: ['lots', variables.orderId] });
     },
   });
 
@@ -314,11 +307,11 @@ export default function RecordPage() {
                   <label htmlFor="lotId" className="block text-sm font-medium">
                     Lot <span className="text-red-500">*</span>
                   </label>
-                  <select id="lotId" {...register('lotId')} className="w-full border rounded p-2">
+                  <select id="lotId" {...register('lotId', { required: 'Lot is required' })} className="w-full border rounded p-2">
                     <option value="">Select a lot...</option>
                     {lots.map((lot) => (
                       <option key={lot.id} value={lot.id}>
-                        Lot {lot.id.slice(0, 8)} - Qty: {lot.quantity}
+                        Lot #{lot.lotNumber} - {lot.plannedPieces} pieces
                       </option>
                     ))}
                   </select>

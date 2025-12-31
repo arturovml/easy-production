@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+// Base schema - lotId is optional by default
 export const RecordProductionFormSchema = z
   .object({
     orderId: z.string().uuid('Order ID must be a valid UUID'),
@@ -15,6 +16,9 @@ export const RecordProductionFormSchema = z
     message: 'Scrap quantity cannot exceed done quantity',
     path: ['qtyScrapPieces'],
   });
+
+// Dynamic validation: lotId is required when trackingMode != 'piece'
+// This is handled in the UI component, not in the schema
 
 export type RecordProductionFormData = z.infer<typeof RecordProductionFormSchema>;
 

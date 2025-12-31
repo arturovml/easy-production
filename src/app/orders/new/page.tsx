@@ -11,7 +11,7 @@ import { EmptyState } from '../../../ui/components/EmptyState';
 import { LoadingSkeleton } from '../../../ui/components/LoadingSkeleton';
 import { CreateOrderFormSchema, type CreateOrderFormData } from '../../../shared/orderSchemas';
 import { fetchProducts } from '../../../services/ui/productService';
-import { createProductionOrderPiece, type CreateProductionOrderInput } from '../../../services/ui/orderService';
+import { createProductionOrder, type CreateProductionOrderInput } from '../../../services/ui/orderService';
 
 export default function NewOrderPage() {
   const router = useRouter();
@@ -32,16 +32,18 @@ export default function NewOrderPage() {
     resolver: zodResolver(CreateOrderFormSchema),
     defaultValues: {
       quantityRequested: 100,
+      trackingMode: 'piece',
     },
   });
 
   const selectedProductId = watch('productId');
+  const trackingMode = watch('trackingMode');
   const selectedProduct = useMemo(() => {
     return products?.find((p) => p.id === selectedProductId);
   }, [products, selectedProductId]);
 
   const createMutation = useMutation({
-    mutationFn: (input: CreateProductionOrderInput) => createProductionOrderPiece(input),
+    mutationFn: (input: CreateProductionOrderInput) => createProductionOrder(input),
     onSuccess: (order) => {
       queryClient.invalidateQueries({ queryKey: ['ordersList'] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
@@ -58,6 +60,8 @@ export default function NewOrderPage() {
       await createMutation.mutateAsync({
         productId: data.productId,
         quantityRequested: data.quantityRequested,
+        trackingMode: data.trackingMode,
+        lotSize: data.lotSize,
         notes: data.notes,
       });
     } catch (error) {
@@ -157,13 +161,56 @@ export default function NewOrderPage() {
               {errors.quantityRequested && <p className="text-red-500 text-sm">{errors.quantityRequested.message}</p>}
             </div>
 
-            {/* Tracking Mode Badge */}
-            <div className="mb-4">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded text-sm">
-                <span>Tracking Mode:</span>
-                <span className="font-medium">Piece tracking</span>
-              </div>
+            {/* Tracking Mode */}
+            <div className="space-y-2 mb-4">
+              <label htmlFor="trackingMode" className="block text-sm font-medium">
+                Tracking Mode <span className="text-red-500">*</span>
+              </label>
+              <select id="trackingMode" {...register('trackingMode')} className="w-full border rounded p-2">
+                <option value="piece">Piece - Track by individual pieces</option>
+                <option value="lot">Lot - Track by lots, requires choosing a lot when recording</option>
+                <option value="hybrid">Hybrid - Allows recording by lot but keeps piece-level counts</option>
+              </select>
+              {errors.trackingMode && <p className="text-red-500 text-sm">{errors.trackingMode.message}</p>}
+              {trackingMode === 'lot' && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Lot tracking:</strong> Tracks progress by lots, requires choosing a lot when recording.
+                  </p>
+                </div>
+              )}
+              {trackingMode === 'hybrid' && (
+                <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded">
+                  <p className="text-sm text-blue-800">
+                    <strong>Hybrid tracking:</strong> Allows recording by lot but keeps piece-level counts.
+                  </p>
+                </div>
+              )}
             </div>
+
+            {/* Lot Size (conditional) */}
+            {trackingMode !== 'piece' && (
+              <div className="space-y-2 mb-4">
+                <label htmlFor="lotSize" className="block text-sm font-medium">
+                  Lot Size <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="number"
+                  id="lotSize"
+                  {...register('lotSize', { valueAsNumber: true })}
+                  min="1"
+                  step="1"
+                  className="w-full border rounded p-2"
+                  placeholder="Pieces per lot"
+                />
+                {errors.lotSize && <p className="text-red-500 text-sm">{errors.lotSize.message}</p>}
+                {watch('quantityRequested') && watch('lotSize') && (
+                  <p className="text-sm text-muted-foreground">
+                    Will create {Math.ceil((watch('quantityRequested') || 0) / (watch('lotSize') || 1))} lot(s)
+                  </p>
+                )}
+              </div>
+            )}
 
             {/* Notes */}
             <div className="space-y-2">

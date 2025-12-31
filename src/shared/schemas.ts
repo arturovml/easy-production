@@ -58,14 +58,17 @@ export const ProductionOrderSchema = z.object({
   productId: z.string().uuid(),
   quantityRequested: z.number().int().positive(),
   workshopId: z.string().uuid(),
-  routingVersionSnapshot: z.unknown() // keep simple for now
+  routingVersionSnapshot: z.unknown(), // keep simple for now
+  trackingMode: z.enum(['piece', 'lot', 'hybrid']).default('piece')
 });
 export type ProductionOrder = z.infer<typeof ProductionOrderSchema>;
 
 export const LotSchema = z.object({
   id: z.string().uuid(),
-  productId: z.string().uuid(),
-  quantity: z.number().int().nonnegative(),
+  orderId: z.string().uuid().optional(), // Required for new lots, optional for legacy compatibility
+  productId: z.string().uuid().optional(), // Legacy field, kept for compatibility
+  lotNumber: z.number().int().positive(),
+  plannedPieces: z.number().int().positive(),
   createdAt: z.string().datetime()
 });
 export type Lot = z.infer<typeof LotSchema>;

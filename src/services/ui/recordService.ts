@@ -70,8 +70,12 @@ export async function recordProduction(input: RecordProductionInput): Promise<Wo
     if (!lot) {
       throw new Error('Lot not found');
     }
-    // Validate lot belongs to order's product
-    if (lot.productId !== order.productId) {
+    // Validate lot belongs to order
+    if (lot.orderId && lot.orderId !== order.id) {
+      throw new Error('Lot does not belong to this order');
+    }
+    // Legacy: if lot has productId but no orderId, validate against productId
+    if (!lot.orderId && lot.productId && lot.productId !== order.productId) {
       throw new Error('Lot does not belong to order product');
     }
   }

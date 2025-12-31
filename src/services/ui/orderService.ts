@@ -1,22 +1,28 @@
 import { v4 as uuidv4 } from 'uuid';
-import { ProductionOrder, ProductionOrderSchema, WorkEventSchema, OutboxEventSchema } from '../../shared/schemas';
+import { ProductionOrder, ProductionOrderSchema, WorkEventSchema, OutboxEventSchema, Lot, LotSchema } from '../../shared/schemas';
 import { ProductionOrderRepositoryDexie } from '../../data/dexie/workOrderRepositoryDexie';
 import { EventRepositoryDexie, OutboxRepositoryDexie } from '../../data/dexie/eventRepositoryDexie';
+import { LotRepositoryDexie } from '../../data/dexie/lotRepositoryDexie';
 import { ProductRepositoryDexie } from '../../data/dexie/productRepositoryDexie';
 import { OperationRepositoryDexie } from '../../data/dexie/operationRepositoryDexie';
 import { computeOrderProgressFromEvents, computeStageTotalsFromEvents } from '../../domain/services/aggregation';
+import { computeLotProgressFromEvents } from '../../domain/services/lotProgress';
 import { fetchProductById } from './productService';
 import { fetchRoutingVersionById, fetchRoutingOperationsByVersion } from './routingService';
 import { fetchOperationById } from './operationService';
+import { getLotsForOrder } from './lotService';
 
 const orderRepo = new ProductionOrderRepositoryDexie();
 const eventRepo = new EventRepositoryDexie();
+const lotRepo = new LotRepositoryDexie();
 const productRepo = new ProductRepositoryDexie();
 const operationRepo = new OperationRepositoryDexie();
 
 export type CreateProductionOrderInput = {
   productId: string;
   quantityRequested: number;
+  trackingMode: 'piece' | 'lot' | 'hybrid';
+  lotSize?: number; // Required if trackingMode != 'piece'
   notes?: string;
 };
 
@@ -35,7 +41,11 @@ type RoutingSnapshot = {
   operations: RoutingSnapshotOperation[];
 };
 
-export async function createProductionOrderPiece(input: CreateProductionOrderInput): Promise<ProductionOrder> {
+export async function createProductionOrder(input: CreateProductionOrderInput): Promise<ProductionOrder> {
+  // Validate lotSize if trackingMode != piece
+  if (input.trackingMode !== 'piece' && (!input.lotSize || input.lotSize <= 0 || input.lotSize > input.quantityRequested)) {
+    throw new Error('Lot size is required and must be greater than 0 and less than or equal to target pieces');
+  }
   // a) Fetch product by id
   const product = await fetchProductById(input.productId);
   if (!product) {
@@ -93,16 +103,43 @@ export async function createProductionOrderPiece(input: CreateProductionOrderInp
 
   // e) Create ProductionOrder
   const workshopId = uuidv4(); // Generate new workshopId for this order
+  const orderId = uuidv4();
   const order = ProductionOrderSchema.parse({
-    id: uuidv4(),
+    id: orderId,
     productId: input.productId,
     quantityRequested: input.quantityRequested,
     workshopId,
     routingVersionSnapshot: routingSnapshot,
+    trackingMode: input.trackingMode,
   });
 
   // f) Persist via repository
   await orderRepo.add(order);
+
+  // g) Create lots if trackingMode != piece
+  if (input.trackingMode !== 'piece' && input.lotSize) {
+    const lotCount = Math.ceil(input.quantityRequested / input.lotSize);
+    const lots: Lot[] = [];
+    const now = new Date().toISOString();
+
+    for (let i = 1; i <= lotCount; i++) {
+      const isLastLot = i === lotCount;
+      const plannedPieces = isLastLot
+        ? input.quantityRequested - (lotCount - 1) * input.lotSize // Last lot gets remainder
+        : input.lotSize;
+
+      const lot = LotSchema.parse({
+        id: uuidv4(),
+        orderId: orderId,
+        lotNumber: i,
+        plannedPieces,
+        createdAt: now,
+      });
+      lots.push(lot);
+    }
+
+    await lotRepo.createMany(lots);
+  }
 
   // Create initial WorkEvent (ProductionOrderCreated)
   const event = WorkEventSchema.parse({
@@ -138,6 +175,7 @@ export type OrdersListVM = {
   processedPieces: number;
   scrapPieces: number;
   completionPercent: number;
+  trackingMode: 'piece' | 'lot' | 'hybrid';
   updatedAt?: string;
 };
 
@@ -166,6 +204,7 @@ export async function fetchOrdersList(): Promise<OrdersListVM[]> {
         processedPieces: progress.processedPieces,
         scrapPieces: progress.scrapPieces,
         completionPercent: progress.completionPercent,
+        trackingMode: o.trackingMode ?? 'piece', // Default to 'piece' for legacy orders
         updatedAt: undefined
       } as OrdersListVM;
     })
@@ -188,6 +227,16 @@ export type OrderDetailVM = {
   wipPieces: number;
   completionPercent: number;
   avgStageProgress?: number;
+  lots?: Array<{
+    id: string;
+    lotNumber: number;
+    plannedPieces: number;
+    donePieces: number;
+    remainingPieces: number;
+    status: 'not_started' | 'in_progress' | 'done';
+    overProduced: boolean;
+    wipPieces?: number;
+  }>;
 };
 
 export async function fetchOrderDetail(orderId: string): Promise<OrderDetailVM | null> {
@@ -218,6 +267,60 @@ export async function fetchOrderDetail(orderId: string): Promise<OrderDetailVM |
     };
   });
 
+  // Fetch lots if trackingMode != piece and compute progress
+  let lots: OrderDetailVM['lots'] = undefined;
+  if (order.trackingMode && order.trackingMode !== 'piece') {
+    const orderLots = await getLotsForOrder(order.id);
+    if (orderLots.length > 0) {
+      // Build routing operations from snapshot for lot progress calculation
+      const routingOps = routingSnapshot.operations.map((op: { operationId: string; sequence: number }) => ({
+        operationId: op.operationId,
+        sequence: op.sequence,
+      }));
+
+      // Compute lot progress from events
+      const lotProgressMap = computeLotProgressFromEvents(
+        orderLots.map((lot) => ({
+          id: lot.id,
+          lotNumber: lot.lotNumber,
+          plannedPieces: lot.plannedPieces,
+        })),
+        routingOps,
+        events
+      );
+
+      // Map to VM format, sorted by lotNumber
+      lots = orderLots
+        .map((lot) => {
+          const progress = lotProgressMap.get(lot.id);
+          if (!progress) {
+            // Fallback if progress not found (shouldn't happen)
+            return {
+              id: lot.id,
+              lotNumber: lot.lotNumber,
+              plannedPieces: lot.plannedPieces,
+              donePieces: 0,
+              remainingPieces: lot.plannedPieces,
+              status: 'not_started' as const,
+              overProduced: false,
+              wipPieces: 0,
+            };
+          }
+          return {
+            id: progress.lotId,
+            lotNumber: progress.lotNumber,
+            plannedPieces: progress.plannedPieces,
+            donePieces: progress.donePieces,
+            remainingPieces: progress.remainingPieces,
+            status: progress.status,
+            overProduced: progress.overProduced,
+            wipPieces: progress.wipPieces,
+          };
+        })
+        .sort((a, b) => a.lotNumber - b.lotNumber);
+    }
+  }
+
   return {
     order,
     stages: enrichedStages,
@@ -226,5 +329,6 @@ export async function fetchOrderDetail(orderId: string): Promise<OrderDetailVM |
     wipPieces: progress.wipPieces,
     completionPercent: progress.completionPercent,
     avgStageProgress: progress.avgStageProgress,
+    lots,
   };
 }

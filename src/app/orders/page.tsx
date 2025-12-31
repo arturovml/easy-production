@@ -96,6 +96,19 @@ export default function OrdersPage() {
                     Order {r.orderId.slice(0, 8)}
                   </Link>
                   <div className="text-xs text-muted-foreground">ID: {r.orderId.slice(0, 8)}...</div>
+                  <div className="mt-1">
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                        r.trackingMode === 'piece'
+                          ? 'bg-blue-100 text-blue-800'
+                          : r.trackingMode === 'lot'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-indigo-100 text-indigo-800'
+                      }`}
+                    >
+                      {r.trackingMode}
+                    </span>
+                  </div>
                 </td>
                 <td className="p-2">
                   <div className="font-medium">{r.productName}</div>

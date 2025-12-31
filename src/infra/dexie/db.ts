@@ -41,6 +41,18 @@ export class AppDB extends Dexie {
       outboxEvents: 'id, status, workshopId, timestamp'
     });
 
+    // Version 2: Add orderId to lots and trackingMode to orders
+    this.version(2)
+      .stores({
+        lots: 'id, orderId, productId', // Add orderId index, keep productId for legacy
+        productionOrders: 'id, productId, workshopId, trackingMode' // Add trackingMode index
+      })
+      .upgrade(async (tx) => {
+        // Migration: existing lots without orderId are left as legacy (no auto-inference)
+        // Existing orders without trackingMode default to 'piece' (handled by schema default)
+        // No data transformation needed - schema defaults handle it
+      });
+
     // Migrate hooks and future versions can be added later.
   }
 }

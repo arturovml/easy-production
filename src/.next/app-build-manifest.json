@@ -11,21 +11,6 @@
       "static/css/app/layout.css",
       "static/chunks/app/layout.js"
     ],
-    "/orders/new/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/orders/new/page.js"
-    ],
-    "/orders/[id]/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/orders/[id]/page.js"
-    ],
-    "/record/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/record/page.js"
-    ],
     "/catalog/products/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
@@ -36,25 +21,25 @@
       "static/chunks/main-app.js",
       "static/chunks/app/catalog/layout.js"
     ],
-    "/catalog/operations/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/catalog/operations/page.js"
-    ],
-    "/catalog/work-centers/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/catalog/work-centers/page.js"
-    ],
-    "/catalog/operators/page": [
-      "static/chunks/webpack.js",
-      "static/chunks/main-app.js",
-      "static/chunks/app/catalog/operators/page.js"
-    ],
     "/products/[productId]/routing/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/products/[productId]/routing/page.js"
+    ],
+    "/record/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/record/page.js"
+    ],
+    "/orders/new/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/orders/new/page.js"
+    ],
+    "/orders/[id]/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/orders/[id]/page.js"
     ]
   }
 }

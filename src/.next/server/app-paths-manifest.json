@@ -1,11 +1,8 @@
 {
-  "/orders/page": "app/orders/page.js",
-  "/products/[productId]/routing/page": "app/products/[productId]/routing/page.js",
-  "/orders/new/page": "app/orders/new/page.js",
   "/record/page": "app/record/page.js",
+  "/orders/new/page": "app/orders/new/page.js",
+  "/products/[productId]/routing/page": "app/products/[productId]/routing/page.js",
   "/orders/[id]/page": "app/orders/[id]/page.js",
-  "/catalog/products/page": "app/catalog/products/page.js",
-  "/catalog/operations/page": "app/catalog/operations/page.js",
-  "/catalog/work-centers/page": "app/catalog/work-centers/page.js",
-  "/catalog/operators/page": "app/catalog/operators/page.js"
+  "/orders/page": "app/orders/page.js",
+  "/catalog/products/page": "app/catalog/products/page.js"
 }
